@@ -61,7 +61,7 @@ def can_manage_residents(person, hostel_code):
 
     return is_warden(person, hostel_code) \
         or is_supervisor(person, hostel_code) \
-
+        or is_global_admin(person) is not None
 
 def is_hostel_admin(person, hostel_code):
     """
