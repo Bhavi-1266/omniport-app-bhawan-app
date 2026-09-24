@@ -106,6 +106,8 @@ class ResidentViewset(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
+        # Block a second active registration in the same bhawan. An active
+        # registration in another bhawan is a transfer and is closed below.
         if Resident.objects.filter(
             person=person,
             hostel=hostel,
