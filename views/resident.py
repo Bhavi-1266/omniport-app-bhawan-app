@@ -480,11 +480,20 @@ class ResidentViewset(viewsets.ModelViewSet):
                 {"detail": "rows must be a non-empty list of objects"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        return Response(register_residents(
+        report = register_residents(
             rows,
             dry_run=request.data.get('dry_run') is not False,
             person=request.person,
-        ))
+        )
+        summary = report['summary']
+        logger.info(
+            f'{request.person}({request.person.id}) '
+            f'{"previewed" if report["dry_run"] else "ran"} a bulk registration of '
+            f'{len(rows)} rows into {hostel__code}: {summary["created"]} created, '
+            f'{summary["updated"]} updated, {summary["existing"]} unchanged, '
+            f'{summary["skipped"]} skipped'
+        )
+        return Response(report)
 
     @action(detail=True, methods=['get'])
     def previous_records(self, request, hostel__code, pk):
