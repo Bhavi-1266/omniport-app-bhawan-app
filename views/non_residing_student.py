@@ -35,38 +35,38 @@ class NonResidingStudentViewset(viewsets.ModelViewSet):
             return NonResidingStudent.objects.none()
         return NonResidingStudent.objects.filter(hostel__code=hostel_code)
 
-    def _is_any_hostel_admin(self, person):
-        hostel_codes = HostelAdmin.objects.filter(person=person).values_list('hostel__code', flat=True)
-        return any(is_hostel_admin(person, hostel_code) for hostel_code in hostel_codes if hostel_code)
+    def _get_nrs_accessible_hostel_codes(self, person):
+        """
+        Return the hostel codes whose NRS records the person may see, or None
+        when a global admin may see every hostel
+        """
 
-    def _has_nrs_access_any_hostel(self, person):
         if is_global_admin(person):
-            return True
+            return None
 
-        hostel_codes = HostelAdmin.objects.filter(person=person).values_list('hostel__code', flat=True)
-        return any(
-            (
-                is_hostel_admin(person, hostel_code)
-                or is_warden(person, hostel_code)
-                or is_supervisor(person, hostel_code)
-            )
-            for hostel_code in hostel_codes
-            if hostel_code
+        # Wardens and supervisors are HostelAdmin rows too, so this covers them
+        return list(
+            HostelAdmin.objects.filter(person=person, hostel__isnull=False)
+            .values_list('hostel__code', flat=True)
+            .distinct()
         )
 
     def all(self, request):
-        if not self._has_nrs_access_any_hostel(request.person):
+        hostel_codes = self._get_nrs_accessible_hostel_codes(request.person)
+        if hostel_codes is not None and not hostel_codes:
             return Response(
                 {'detail': 'You are not allowed to perform this action!'},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
         queryset = NonResidingStudent.objects.all()
+        if hostel_codes is not None:
+            queryset = queryset.filter(hostel__code__in=hostel_codes)
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
     def get_serializer_context(self):
-        context = {}
+        context = super().get_serializer_context()
         hostel_code = self.kwargs.get('hostel__code')
         if hostel_code:
             context['hostel__code'] = hostel_code

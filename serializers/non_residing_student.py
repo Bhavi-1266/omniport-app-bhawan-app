@@ -39,7 +39,7 @@ class NonResidingStudentSerializer(serializers.ModelSerializer):
         upto_date = validated_attrs.get('upto_date', getattr(self.instance, 'upto_date', None))
 
         if from_date and upto_date and from_date >= upto_date:
-            raise serializers.ValidationError('From date must be earlier than Upto date')
+            raise serializers.ValidationError('From date must be earlier than end date')
 
         return validated_attrs
 
